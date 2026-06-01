@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import { signOut, createChannel } from './actions'
+import { signOut, createChannel, deleteChannel } from './actions'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -33,6 +33,10 @@ export default async function Home() {
         {channels?.map((c)=>(
           <li key={c.id}>
             <a href={`/channels/${c.id}`}># {c.name}</a>
+            <form action={deleteChannel} style={{ display: 'inline', marginLeft: 8 }}>
+              <input type="hidden" name="channelId" value={c.id} />
+              <button type="submit">Delete</button>
+            </form>
           </li>
         ))}
       </ul>

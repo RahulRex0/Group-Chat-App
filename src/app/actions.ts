@@ -38,6 +38,21 @@ export async function createChannel(formData: FormData) {
       channel_id: channelId,
       user_id: user.id,
     })
-  
+
     revalidatePath(`/channels/${channelId}`)
+  }
+  export async function deleteChannel(formData: FormData) {
+    const channelId = formData.get('channelId') as string
+    if (!channelId) return
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return // any logged-in user may delete; just block anonymous
+
+    await supabase
+      .from('channels')
+      .delete()
+      .eq('id', channelId)
+
+    revalidatePath('/')
   }
