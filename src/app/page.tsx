@@ -17,14 +17,12 @@ export default async function Home() {
 
   if(!user)
     return(
-      <div>
-                <div>Group Chat</div>
-                <p>
-                  Not logged in.
-                  <a href="/login">Go to login →</a>
-                </p>
+      <div className={styles.landing}>
+        <Image src="/images/groupchat-logo.svg" alt='groupchat icon' width={88} height={88} className={styles.landingLogo} />
+        <h1 className={styles.landingTitle}>Group Chat</h1>
+        <p className={styles.landingText}>A realtime space for your team to talk. Log in to jump into the conversation.</p>
+        <a href="/login" className={styles.loginButton}>Go to login &rarr;</a>
       </div>
-
     )
   
   const { data: channels } = await supabase.from('channels').select('id, name, description').order('created_at', { ascending: true })

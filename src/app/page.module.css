@@ -98,3 +98,44 @@
   font-weight: bold;
   flex-shrink: 0;
 }
+.landing{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.landingLogo{
+  width: 88px;
+  height: 88px;
+}
+.landingTitle{
+  margin: 12px 0 0;
+  font-size: 56px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.landingText{
+  margin: 16px 0 0;
+  max-width: 420px;
+  color: #555;
+  line-height: 1.5;
+}
+.loginButton{
+  margin-top: 28px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.loginButton:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.4);
+}
