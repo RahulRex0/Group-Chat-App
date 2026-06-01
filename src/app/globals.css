@@ -1,12 +1,16 @@
 :root {
   --background: #ffffff;
+  --background-2: #dde3f8;
   --foreground: #171717;
+  --accent: #6366f1;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
+    --background-2: #191926;
     --foreground: #ededed;
+    --accent: #818cf8;
   }
 }
 
@@ -25,7 +29,11 @@ body {
   display: flex;
   flex-direction: column;
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(48rem 48rem at 50% -16%,
+      color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--background) 0%, var(--background-2) 100%);
+  background-attachment: fixed;
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
