@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { sendMessage } from '@/app/actions'
 import Messages from './messages'
+import styles from './page.module.css'
 
 type ChannelPageProps = {
   params: Promise<{ id: string }>
@@ -38,16 +39,20 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
   }))
 
   return (
-    <main>
-      <a href="/">← back to channels</a>
-      <h1># {channel?.name ?? 'Unknown channel'}</h1>
+    <main className={styles.main}>
+      <div className={styles.top}>
+        <a href="/" style={{color: '#666', fontSize:"14px"}}>← back to channels</a>
+        <div style={{fontSize:"28px", fontWeight:"bold"}}># {channel?.name ?? 'Unknown channel'}</div>
+      </div>
+      <div className={styles.message}>
+        <Messages initialMessages={initialMessages} currentUserId={user?.id ?? null} channelId={id} />
+      </div>
 
-      <Messages initialMessages={initialMessages} currentUserId={user?.id ?? null} channelId={id} />
 
-      <form action={sendMessage}>
+      <form action={sendMessage} className={styles.bottom}>
         <input type="hidden" name="channelId" value={id} />
-        <input name="content" placeholder="Type a message…" required autoComplete="off" />
-        <button type="submit">Send</button>
+        <input name="content" placeholder="Type a message…" required autoComplete="off" className={styles.input} />
+        <button className={styles.button} type="submit">Send</button>
       </form>
     </main>
   )
