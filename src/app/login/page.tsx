@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
 import Image from "next/image"
 import styles from "./login.module.css"
 
@@ -10,21 +8,15 @@ export default function LoginPage(){
     const [email,setEmail]=useState('')
     const [password,setPassword]=useState('')
     const [message,setMessage]=useState('')
-    const router= useRouter()
-    const supabase= createClient()
 
     async function handleSignUp() {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) setMessage(error.message)
-        else router.push('/')
-      }
-    
-      async function handleLogIn() {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) setMessage(error.message)
-        else router.push('/')
-      }
-    
+        setMessage('Sign up is not connected to a backend yet.')
+    }
+
+    async function handleLogIn() {
+        setMessage('Login is not connected to a backend yet.')
+    }
+
     return(
         <main className={styles.page}>
             <div className={styles.card}>

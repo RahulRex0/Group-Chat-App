@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server'
 import { signOut, createChannel, deleteChannel } from './actions'
 import styles from '@/app/page.module.css'
 import Image from 'next/image'
@@ -12,8 +11,8 @@ const gradients = [
 ]
 
 export default async function Home() {
-  const supabase = await createClient()
-  const { data: {user} } = await supabase.auth.getUser()
+  const user = null as { email: string } | null
+  const channels: { id: string; name: string; description: string | null }[] = []
 
   if(!user)
     return(
@@ -24,8 +23,6 @@ export default async function Home() {
         <a href="/login" className={styles.loginButton}>Go to login &rarr;</a>
       </div>
     )
-  
-  const { data: channels } = await supabase.from('channels').select('id, name, description').order('created_at', { ascending: true })
 
   return (
     <main className={styles.main}>
@@ -41,7 +38,7 @@ export default async function Home() {
         </button>
         </form>
       </div>
-      
+
       <div style={{display:'flex', gap:'8px', marginTop:"5px"}}>
         <div style={{fontWeight:'100', color: '#666'}}>Logged in as</div>
         <strong>{user.email}</strong>
