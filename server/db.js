@@ -1,5 +1,8 @@
+import net from "net"
 import pg from "pg"
 import dotenv from "dotenv"
+
+net.setDefaultAutoSelectFamilyAttemptTimeout(2000)
 
 dotenv.config()
 
