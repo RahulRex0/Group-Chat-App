@@ -3,6 +3,7 @@ import cors from "cors"
 import dotenv from "dotenv"
 import pool from "./db.js"
 import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 
 dotenv.config()
 
@@ -53,6 +54,38 @@ app.post("/register",async(req,res)=>{
         res.status(500).json({error:"registration failed"})
         
     }
+})
+
+app.post("/login",async(req,res)=>{
+    const {email,password}=req.body
+
+    if(!email ||!password){
+        return res.status(400).json({error: "email and password needed"})
+    }
+    try {
+
+        const result = await pool.query(`select * from users where email= $1`,[email])
+
+        const user = result.rows[0];
+
+        if(!user || !await bcrypt.compare(password,user.password)
+        ){
+            return res.status(401).json({error: "invalid credentials"})
+        }
+
+        const token = jwt.sign(
+            { userId: user.id, username: user.username },process.env.JWT_SECRET,{ expiresIn: "7d" }
+        )
+
+        res.json({ user: { id: user.id, username: user.username, email: user.email }, token });
+        
+
+          
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({error:"login failed"})
+    }
+
 })
 
 const PORT= process.env.PORT || 4000
