@@ -9,8 +9,9 @@
 }
 .button{
   padding: 8px 16px;
-  background: white;
-  border: 1px solid rgb(197, 192, 192);
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
   transition: 0.3s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
@@ -27,10 +28,10 @@
   display: flex;
   justify-content: space-between;
   padding: 1.5rem 2rem;
-  background-color: white;
-  border: 1px solid rgb(197, 192, 192);
+  background-color: var(--card);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   align-items: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 
@@ -44,7 +45,7 @@
 .bottom{
   margin-top: 30px;
   padding: 1rem 1rem;
-  background-color: white;
+  background-color: var(--card);
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
 }
@@ -55,7 +56,8 @@
   justify-content: space-between;
 }
 .input{
-  background-color: rgb(238, 239, 240);
+  background-color: var(--input);
+  color: var(--foreground);
   min-width: 500px;
   padding: .75rem .75rem;
   border: none;
@@ -122,7 +124,7 @@
 .landingText{
   margin: 16px 0 0;
   max-width: 420px;
-  color: #555;
+  color: var(--muted);
   line-height: 1.5;
 }
 .loginButton{
