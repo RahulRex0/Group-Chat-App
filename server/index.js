@@ -175,6 +175,52 @@ app.delete("/channels/:id",requireAuth,async(req,res)=>{
     }
 })
 
+app.get("/channels/:id/messages",requireAuth,async(req,res)=>{
+    const {id}=req.params
+
+    try {
+        const result=await pool.query(`select messages.id,messages.user_id,messages.created_at,messages.content,users.username from messages join users on users.id = messages.user_id where messages.channel_id=$1 order by messages.created_at `,[id])
+
+        return res.status(200).json({messages: result.rows})
+
+    } catch (error) {
+
+        console.log(error)
+        if(error.code==="22P02"){
+            return res.status(404).json({ error: "Channel not found" })
+        }
+
+        return res.status(500).json({ error: "Failed to fetch messages" })
+        
+    }
+})
+
+app.post("/channels/:id/messages",requireAuth,async(req,res)=>{
+    const {content}=req.body
+    if(!content){
+        return res.status(400).json({error:"no content"})
+    }
+
+    const {id}=req.params
+    const{userId}=req.user
+
+    try {
+        const result= await pool.query(`insert into messages(user_id, channel_id, content)values($1,$2,$3)returning id, content, created_at, user_id `,[userId,id,content])
+
+        return res.status(201).json({ message: {...result.rows[0], username: req.user.username} })
+    } catch (error) {
+        console.log(error)
+        if(error.code==="23503"){
+            return res.status(404).json({ error: "Channel not found" })
+        }
+        if(error.code==="22P02"){
+            return res.status(404).json({ error: "Channel not found" })
+        }
+        return res.status(500).json({ error: "Failed to create message" })
+    }
+
+})
+
 const PORT= process.env.PORT || 4000
 
 app.listen(PORT, () => {
