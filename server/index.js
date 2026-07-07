@@ -12,6 +12,27 @@ const app= express()
 app.use(cors())
 app.use(express.json())
 
+function requireAuth(req,res,next){
+    const{authorization}=req.headers
+    if(!authorization){
+        return res.status(401).json({error:"missing token"})
+    }
+
+    const token= authorization.split(" ")[1]
+
+    try {
+
+        const decoded = jwt.verify(token,process.env.JWT_SECRET)
+        req.user=decoded
+        next()
+        
+    } catch (error) {
+        console.log(error)
+        return res.status(401).json({ error: "invalid or expired token" })
+
+    }
+}
+
 app.get("/",(req,res)=>{
     res.json({message:"express working"})
 })
@@ -94,6 +115,64 @@ app.post("/login",async(req,res)=>{
         res.status(500).json({error:"login failed"})
     }
 
+})
+
+app.get("/me", requireAuth, (req, res) => {
+    res.json({ user: req.user })
+})
+
+app.get("/channels",requireAuth,async(req,res)=>{
+    try {
+        const channels= await pool.query(`select id, name from channels order by created_at `)
+        return res.json({ channels: channels.rows })
+        
+    } catch (error) {
+
+        console.log(error)
+        return res.status(500).json({ error: "Failed to fetch channels" });
+        
+    }
+})
+
+app.post("/channels",requireAuth,async(req,res)=>{
+    const {name}=req.body
+    if(!name){
+        return res.status(400).json({error: "missing name of channel"})
+    }
+    try {
+        const channels=await pool.query(`insert into channels(name) values ($1) returning id, name, created_at`,[name])
+
+        return res.status(201).json({channel: channels.rows[0]})
+    } catch (error) {
+        console.log(error);
+        if(error.code==="23505"){
+            return res.status(409).json({error: "duplicate channel not creatable"})
+        }
+        return res.status(500).json({ error: "Failed to create channel" });
+    }
+})
+
+app.delete("/channels/:id",requireAuth,async(req,res)=>{
+    
+    try {
+
+        const {id}=req.params
+        const result=await pool.query(`delete from channels where id =$1`,[id])
+
+        if(!result.rowCount){
+            return res.status(404).json({ error: "Channel not found" });
+        }
+
+        return res.status(204).send()
+        
+    } catch (error) {
+        console.log(error)
+        if(error.code==="22P02")
+        {
+            return res.status(404).json({error:"no such channel — an id that can't even be a uuid certainly isn't one"})
+        }
+        return res.status(500).json({ error: "Failed to delete channel" });
+    }
 })
 
 const PORT= process.env.PORT || 4000
