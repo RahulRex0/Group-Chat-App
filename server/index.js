@@ -51,6 +51,14 @@ app.post("/register",async(req,res)=>{
 
     } catch (error) {
         console.log(error)
+        if (error.code === "23505") {
+            if (error.constraint === "users_email_key") {
+                return res.status(409).json({ error: "email already registered"})
+            }
+            if (error.constraint === "users_username_key") {
+                return res.status(409).json({ error: "username already taken"})
+            }
+        }
         res.status(500).json({error:"registration failed"})
         
     }
