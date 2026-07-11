@@ -4,21 +4,26 @@ import dotenv from "dotenv"
 import pool from "./db.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import cookieParser from "cookie-parser"
 
 dotenv.config()
 
 const app= express()
 
-app.use(cors())
+app.use(cors({ origin: "http://localhost:3000", credentials: true }))
 app.use(express.json())
+app.use(cookieParser())
 
 function requireAuth(req,res,next){
-    const{authorization}=req.headers
-    if(!authorization){
-        return res.status(401).json({error:"missing token"})
+    let token = req.cookies.token
+
+    if (!token && req.headers.authorization) {
+        token = req.headers.authorization.split(" ")[1]
     }
 
-    const token= authorization.split(" ")[1]
+    if(!token){
+        return res.status(401).json({error:"missing token"})
+    }
 
     try {
 
@@ -105,8 +110,13 @@ app.post("/login",async(req,res)=>{
         const token = jwt.sign(
             { userId: user.id, username: user.username },process.env.JWT_SECRET,{ expiresIn: "7d" }
         )
+        res.cookie("token", token, {
+            httpOnly: true,
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        })
 
-        res.json({ user: { id: user.id, username: user.username, email: user.email }, token });
+        res.json({ user: { id: user.id, username: user.username, email: user.email }});
         
 
           
