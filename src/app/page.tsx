@@ -1,6 +1,8 @@
 import { signOut, createChannel, deleteChannel } from './actions'
 import styles from '@/app/page.module.css'
 import Image from 'next/image'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 
 const gradients = [
   'linear-gradient(135deg, #f59e0b, #f97316)',
@@ -11,18 +13,39 @@ const gradients = [
 ]
 
 export default async function Home() {
-  const user = null as { email: string } | null
-  const channels: { id: string; name: string; description: string | null }[] = []
 
-  if(!user)
-    return(
-      <div className={styles.landing}>
-        <Image src="/images/groupchat-logo.svg" alt='groupchat icon' width={88} height={88} className={styles.landingLogo} />
-        <h1 className={styles.landingTitle}>Group Chat</h1>
-        <p className={styles.landingText}>A realtime space for your team to talk. Log in to jump into the conversation.</p>
-        <a href="/login" className={styles.loginButton}>Go to login &rarr;</a>
-      </div>
-    )
+  const api = process.env.NEXT_PUBLIC_API_URL
+
+  const token = (await cookies()).get("token")?.value
+  if (!token) {
+    redirect('/login')
+  }
+  const meRes = await fetch(`${api}/me`, {
+    headers: { Cookie: `token=${token}` },
+    cache: 'no-store'
+  })
+
+  const channelsRes= await fetch(`${api}/channels`,{
+    headers: { Cookie: `token=${token}` },
+    cache: 'no-store'
+  })
+
+  if (meRes.status === 401 || channelsRes.status === 401) {
+    redirect('/login')
+  }
+  
+  if (!meRes.ok || !channelsRes.ok) {
+    throw new Error('Failed to load home page')
+  }
+
+  const { user } = await meRes.json() as {
+    user: { userId: string; username: string }
+  }
+
+  const { channels } = await channelsRes.json() as {
+    channels: { id: string; name: string }[]
+  }
+
 
   return (
     <main className={styles.main}>
@@ -41,7 +64,7 @@ export default async function Home() {
 
       <div style={{display:'flex', gap:'8px', marginTop:"5px"}}>
         <div style={{fontWeight:'100', color: '#666'}}>Logged in as</div>
-        <strong>{user.email}</strong>
+        <strong>{user.username}</strong>
       </div>
       <div style={{fontWeight:"bold", marginTop:"20px"}}>channels</div>
 <div>
