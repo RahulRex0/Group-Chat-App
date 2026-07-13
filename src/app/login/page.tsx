@@ -19,6 +19,7 @@ export default function LoginPage(){
             const res= await fetch(`${api}/register`,{
                 method:"post",
                 headers:{"content-type":"application/json"},
+                credentials:"include",
                 body:JSON.stringify({email,password})
             })
             const data = await res.json() 
@@ -54,7 +55,6 @@ export default function LoginPage(){
                 return
             }
 
-            localStorage.setItem("user",JSON.stringify(data.user))
             router.push("/") 
 
         } catch (error) {
