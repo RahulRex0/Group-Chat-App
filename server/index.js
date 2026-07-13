@@ -179,7 +179,7 @@ app.delete("/channels/:id",requireAuth,async(req,res)=>{
         console.log(error)
         if(error.code==="22P02")
         {
-            return res.status(404).json({error:"no such channel — an id that can't even be a uuid certainly isn't one"})
+            return res.status(404).json({error:"Channel not found"})
         }
         return res.status(500).json({ error: "Failed to delete channel" });
     }
@@ -229,6 +229,11 @@ app.post("/channels/:id/messages",requireAuth,async(req,res)=>{
         return res.status(500).json({ error: "Failed to create message" })
     }
 
+})
+
+app.post("/logout", (req, res) => {
+    res.clearCookie("token")
+    return res.json({ ok: true })
 })
 
 const PORT= process.env.PORT || 4000
