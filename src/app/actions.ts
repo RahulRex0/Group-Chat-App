@@ -7,7 +7,7 @@ import { cookies } from 'next/headers'
 const api = process.env.NEXT_PUBLIC_API_URL
 
 export async function signOut() {
-  
+
   const cookieStore = await cookies()
   cookieStore.delete('token')
 
@@ -38,6 +38,22 @@ export async function sendMessage(formData: FormData) {
   const channelId = formData.get('channelId') as string
   if (!content || !channelId) return
 
+  const token = (await cookies()).get('token')?.value
+  if (!token) {
+    redirect('/login')
+  }
+
+  const res = await fetch(`${api}/channels/${channelId}/messages`, {
+    method: 'post',
+    headers: {
+      'content-type': 'application/json',
+      Cookie: `token=${token}`,
+    },
+    body: JSON.stringify({ content }),
+  })
+
+  if (!res.ok) return
+
   revalidatePath(`/channels/${channelId}`)
 }
 
@@ -56,6 +72,6 @@ export async function deleteChannel(formData: FormData) {
   })
 
   if(!res.ok){return}
-  
+
   revalidatePath('/')
 }
