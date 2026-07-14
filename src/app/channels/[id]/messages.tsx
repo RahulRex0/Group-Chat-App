@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react"
 import styles from "./messages.module.css"
 
 type Messages = {
@@ -23,7 +23,7 @@ function useHydrated() {
 }
 
 export default function Messages({ initialMessages, currentUserId }: MessagesProps) {
-    const [messages] = useState(initialMessages)
+    const messages = initialMessages
     const hydrated = useHydrated()
 
     return (
