@@ -5,6 +5,7 @@ import pool from "./db.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import cookieParser from "cookie-parser"
+import { WebSocketServer } from "ws" 
 
 dotenv.config()
 
@@ -238,7 +239,32 @@ app.post("/logout", (req, res) => {
 
 const PORT= process.env.PORT || 4000
 
-app.listen(PORT, () => {
+const server= app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`)
 })
 
+const wss= new WebSocketServer({server})
+
+wss.on("connection", (socket,req) => {
+
+    const token = req.headers.cookie?.split("; ").find(c => c.startsWith("token="))?.slice(6)
+
+    if(!token){
+
+        return socket.close(4001, "unauthorized")
+    }
+
+    try {
+        
+        const decoded = jwt.verify(token,process.env.JWT_SECRET)
+        socket.user=decoded
+        console.log(`socket connected: ${socket.user.username}`)
+
+    } catch (error) {
+        console.log(error)
+        return socket.close(4001, "unauthorized") 
+        
+    }
+
+    socket.on("close", () => console.log(`socket closed: ${socket.user.username}`))
+  })
