@@ -265,6 +265,27 @@ wss.on("connection", (socket,req) => {
         return socket.close(4001, "unauthorized") 
         
     }
+    
+    socket.on("message", (rawData) => {
+        let event
+    
+        try {
+            event = JSON.parse(rawData.toString())
+        } catch {
+            return
+        }
+    
+        if (
+            event.type === "subscribe" &&
+            typeof event.channelId === "string"
+        ) {
+            socket.channelId = event.channelId
+    
+            console.log(
+                `${socket.user.username} subscribed to ${socket.channelId}`
+            )
+        }
+    })
 
     socket.on("close", () => console.log(`socket closed: ${socket.user.username}`))
   })

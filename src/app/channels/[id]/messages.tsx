@@ -1,7 +1,7 @@
 'use client'
 
-import { useSyncExternalStore } from "react"
 import styles from "./messages.module.css"
+import { useEffect, useSyncExternalStore } from "react"
 
 type Messages = {
     id: string
@@ -22,9 +22,39 @@ function useHydrated() {
     return useSyncExternalStore(subscribe, () => true, () => false)
 }
 
-export default function Messages({ initialMessages, currentUserId }: MessagesProps) {
+export default function Messages({ initialMessages, currentUserId, channelId }: MessagesProps) {
     const messages = initialMessages
     const hydrated = useHydrated()
+
+    useEffect(()=>{
+
+        const apiUrl= process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) return
+
+        const socketUrl = new URL(apiUrl)
+        socketUrl.protocol =
+            socketUrl.protocol === "https:" ? "wss:" : "ws:"
+
+        const socket = new WebSocket(socketUrl)
+
+        const handleOpen = () => {
+            console.log("WebSocket connected")
+
+            const subscription = {
+                type: "subscribe",
+                channelId
+            }
+        
+            socket.send(JSON.stringify(subscription))
+        }
+    
+        socket.addEventListener("open", handleOpen)
+
+        return()=>{
+            socket.removeEventListener("open", handleOpen)
+            socket.close()
+        }
+    },[channelId])
 
     return (
         <div className={styles.list}>
