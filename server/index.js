@@ -5,13 +5,13 @@ import pool from "./db.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import cookieParser from "cookie-parser"
-import { WebSocketServer } from "ws" 
+import WebSocket, { WebSocketServer } from "ws"
 
 dotenv.config()
 
 const app= express()
 
-app.use(cors({ origin: "http://localhost:3000", credentials: true }))
+app.use(cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000", credentials: true }))
 app.use(express.json())
 app.use(cookieParser())
 
@@ -114,6 +114,8 @@ app.post("/login",async(req,res)=>{
         res.cookie("token", token, {
             httpOnly: true,
             sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            domain: process.env.COOKIE_DOMAIN,
             maxAge: 7 * 24 * 60 * 60 * 1000,
         })
 
