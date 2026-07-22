@@ -3,6 +3,10 @@
   --background-2: #dde3f8;
   --foreground: #171717;
   --accent: #6366f1;
+  --card: #ffffff;
+  --card-border: #c5c0c0;
+  --input: #eeeff0;
+  --muted: #555555;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -11,6 +15,10 @@
     --background-2: #191926;
     --foreground: #ededed;
     --accent: #818cf8;
+    --card: #15151f;
+    --card-border: #2f2f42;
+    --input: #232330;
+    --muted: #a1a1aa;
   }
 }
 

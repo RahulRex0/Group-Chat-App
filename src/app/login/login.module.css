@@ -8,7 +8,7 @@
   width: 100%;
   max-width: 440px;
   padding: 40px;
-  background: white;
+  background: var(--card);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -26,13 +26,14 @@
 }
 .subtitle{
   margin: 8px 0 0;
-  color: #666;
+  color: var(--muted);
 }
 .input{
   width: 100%;
   margin-top: 16px;
   padding: 14px 16px;
-  background: #f1f2f4;
+  background: var(--input);
+  color: var(--foreground);
   border: 1px solid transparent;
   border-radius: 10px;
   font-size: 15px;
@@ -65,9 +66,10 @@
 .signup{
   flex: 2;
   padding: 14px;
-  border: 1px solid rgb(197, 192, 192);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
-  background: white;
+  background: var(--card);
+  color: var(--foreground);
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;

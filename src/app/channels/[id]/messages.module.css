@@ -11,7 +11,7 @@
     align-items: center;
     gap: 8px;
     margin-top: 80px;
-    color: #6b7280;
+    color: var(--muted);
 }
 
 .emptyIcon {
@@ -59,8 +59,8 @@
 }
 
 .theirs .bubble {
-    background: white;
-    color: #111827;
+    background: var(--card);
+    color: var(--foreground);
     border-bottom-left-radius: 4px;
 }
 
