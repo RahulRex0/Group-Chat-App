@@ -6,11 +6,14 @@
 
 A realtime, channel-based group chat app — a place for your team to talk.
 
-Live demo link:**[🚀 Live Demo](https://group-chat-app-lime-alpha.vercel.app)**
+Live demo: **[🚀 grpchat.org](https://grpchat.org)**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white)](https://expressjs.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![WebSocket](https://img.shields.io/badge/WebSocket-ws-010101?logo=websocket&logoColor=white)](https://github.com/websockets/ws)
 
 </div>
 
@@ -23,63 +26,84 @@ Live demo link:**[🚀 Live Demo](https://group-chat-app-lime-alpha.vercel.app)*
 
 ---
 
-> **🚧 Backend in progress.** This project originally ran on **Supabase** (Auth, Postgres, Realtime). Supabase has been **fully removed**, and a custom backend is being built in its place. The **UI is complete and server-rendered**, but data, auth, and realtime are currently **stubbed with placeholder values** — the app builds and every screen renders, but channels and messages don't persist yet. The demo gif above shows the original Supabase-backed build.
+> **✅ Backend complete.** This project originally ran on **Supabase** (Auth, Postgres, Realtime). Supabase has been fully replaced by a hand-rolled backend — an **Express 5 REST API**, **PostgreSQL**, and a raw **WebSocket** layer. Auth, persistence, and live updates all work end to end.
 
 ## Overview
 
-Group Chat is a small full-stack app built with the **Next.js App Router**. The idea: users sign up with an email and password, browse a list of channels, and chat inside them, with new messages appearing live for everyone in the channel.
+Group Chat is a small full-stack app. The frontend is built with the **Next.js App Router** (Server Components + Server Actions); the backend is written from scratch: an **Express** API, **Postgres** for persistence, **JWT auth** in an httpOnly cookie, and a **`ws`** WebSocket server for realtime — everything Supabase used to provide, rebuilt by hand.
 
-It's a learning project. The frontend leans on modern Next.js patterns (Server Components, Server Actions), and the backend is being written from scratch to replace Supabase.
-
-## Status
-
-| Area                              | State                                          |
-| --------------------------------- | ---------------------------------------------- |
-| UI & routing                      | ✅ Complete                                     |
-| Server Components / Actions wiring | ✅ In place (currently reading placeholder data) |
-| Auth                              | 🚧 To build                                    |
-| Database / persistence            | 🚧 To build                                    |
-| Realtime updates                  | 🚧 To build                                    |
+It's a learning project, and rebuilding the backend without a BaaS was the point.
 
 ## Features
 
-- 💬 **Channels** — the home page lists channels with create and delete controls
+- 💬 **Channels** — create, browse, and delete channels from the home page
+- ⚡ **Live messages** — new messages are pushed over a WebSocket to everyone in the channel, no refresh needed
+- 🔐 **Real auth** — email + password sign-up, bcrypt-hashed passwords, 7-day JWT in an httpOnly cookie
 - 🧑 **Message bubbles** — sender name, avatar initials, and timestamps, with your own messages aligned to the right
 - 🖥️ **Server-rendered** — channel lists and message history load in async React Server Components
-- 🔐 **Auth screens** — email/password login + sign-up UI, ready to wire to a backend
 - 🎨 **Styled with CSS Modules** — scoped styles per route, Geist font via `next/font`
 
 ## Tech Stack
 
-| Layer     | Choice                                                |
-| --------- | ----------------------------------------------------- |
-| Framework | [Next.js 16](https://nextjs.org) (App Router)         |
-| UI        | [React 19](https://react.dev)                         |
-| Backend   | Custom — **in progress** (replacing Supabase)         |
-| Language  | [TypeScript](https://www.typescriptlang.org)          |
-| Styling   | CSS Modules + `next/font` (Geist)                     |
+| Layer     | Choice                                                  |
+| --------- | ------------------------------------------------------- |
+| Frontend  | [Next.js 16](https://nextjs.org) (App Router), [React 19](https://react.dev), TypeScript |
+| API       | [Express 5](https://expressjs.com) on Node.js (ESM)     |
+| Database  | [PostgreSQL](https://www.postgresql.org) via `pg`       |
+| Realtime  | [`ws`](https://github.com/websockets/ws) — raw WebSockets on the same server |
+| Auth      | `jsonwebtoken` + `bcrypt`, JWT in an httpOnly cookie    |
+| Styling   | CSS Modules + `next/font` (Geist)                       |
+
+## How It Works
+
+- **Reads** — `page.tsx` and `channels/[id]/page.tsx` are async Server Components that fetch `/me`, `/channels`, and `/channels/:id/messages` from the API with `cache: 'no-store'`, forwarding the JWT cookie. A missing or rejected token redirects to `/login`.
+- **Writes** — forms post to **Server Actions** in `actions.ts` (`createChannel`, `sendMessage`, `deleteChannel`), which call the API and `revalidatePath`.
+- **Realtime** — `messages.tsx` opens a WebSocket to the API and sends `{ type: "subscribe", channelId }`. When anyone posts a message, the server broadcasts a `message_created` event to every socket subscribed to that channel, and the client merges it into the list (deduped by id).
+- **Auth** — `/register` hashes the password with bcrypt (username is derived from the email prefix); `/login` verifies it and sets the JWT cookie; a `requireAuth` middleware guards every data route; the WebSocket handshake verifies the same cookie before accepting the connection.
+
+## API
+
+All data routes require the JWT cookie (or `Authorization: Bearer <token>`).
+
+| Method | Route                        | Auth | Description                                |
+| ------ | ---------------------------- | ---- | ------------------------------------------ |
+| POST   | `/register`                  | –    | Create an account                          |
+| POST   | `/login`                     | –    | Verify credentials, set the JWT cookie     |
+| POST   | `/logout`                    | –    | Clear the cookie                           |
+| GET    | `/me`                        | 🔒   | Current user from the token                |
+| GET    | `/channels`                  | 🔒   | List channels                              |
+| POST   | `/channels`                  | 🔒   | Create a channel (names are unique)        |
+| DELETE | `/channels/:id`              | 🔒   | Delete a channel                           |
+| GET    | `/channels/:id/messages`     | 🔒   | Message history with sender usernames      |
+| POST   | `/channels/:id/messages`     | 🔒   | Send a message (max 2000 chars) + broadcast |
+| GET    | `/health`                    | –    | DB connectivity check                      |
+
+**WebSocket** — connect to the same origin (`ws://` in dev, `wss://` in prod), then send `{ "type": "subscribe", "channelId": "…" }` to receive `message_created` events for that channel.
 
 ## Project Structure
 
 ```
-src/
-└── app/
-    ├── page.tsx                 # Home: landing page (logged out) / channel list (logged in)
-    ├── layout.tsx               # Root layout, fonts, metadata
-    ├── actions.ts               # Server Actions: signOut, createChannel, sendMessage, deleteChannel
-    ├── login/page.tsx           # Email/password sign up + log in (client component)
-    └── channels/[id]/
-        ├── page.tsx             # Channel view: renders the message list + composer
-        └── messages.tsx         # Client component that renders the message list
-```
+server/                      # Express backend
+├── index.js                 # REST API, auth middleware, WebSocket server
+├── db.js                    # pg connection pool (DATABASE_URL)
+└── schema.sql               # users, channels, messages — uuid PKs, cascade deletes
 
-> The Server Components and Server Actions currently read placeholder values — `null` for the current user/channel and empty arrays for channels/messages — where Supabase used to provide data. Those placeholders are the seams the new backend plugs into.
+src/app/                     # Next.js frontend
+├── page.tsx                 # Home: channel list (redirects to /login when signed out)
+├── layout.tsx               # Root layout, fonts, metadata
+├── actions.ts               # Server Actions: createChannel, sendMessage, deleteChannel, signOut
+├── login/page.tsx           # Email/password log in + sign up
+└── channels/[id]/
+    ├── page.tsx             # Channel view: message history + composer
+    └── messages.tsx         # Renders messages and subscribes to the WebSocket
+```
 
 ## Getting Started
 
 ### Prerequisites
 
 - **Node.js 20+**
+- A **PostgreSQL** database (local, or hosted like [Neon](https://neon.tech))
 
 ### 1. Clone and install
 
@@ -87,32 +111,68 @@ src/
 git clone <your-repo-url>
 cd groupchat
 npm install
+cd server && npm install
 ```
 
-### 2. Run the dev server
+### 2. Create the schema
 
 ```bash
-npm run dev
+psql "$DATABASE_URL" -f server/schema.sql
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The landing page renders immediately; because there's no backend yet, you'll see the logged-out view and empty channels until the backend is wired up.
+### 3. Configure environment
 
-## How It Works
+`server/.env`:
 
-- **Pages** — `page.tsx` and `channels/[id]/page.tsx` are async Server Components. They currently use placeholder data (`user = null`, empty channel and message lists) in the spot where they'll fetch from the backend.
-- **Writing data** — forms post to **Server Actions** in `actions.ts` (`createChannel`, `sendMessage`, `deleteChannel`, `signOut`). Each one parses the submitted form and calls `revalidatePath`; the persistence step in the middle is where the backend goes.
-- **Auth UI** — `login/page.tsx` collects an email and password. Its `handleLogIn` / `handleSignUp` handlers are placeholders until real auth is wired in.
-- **Messages list** — `messages.tsx` is a client component that renders the `initialMessages` passed from the server. Live updates went away with Supabase Realtime; re-adding them (polling, SSE, or websockets) is a backend task — the `channelId` prop is already threaded through for it.
+```bash
+DATABASE_URL=postgres://user:pass@host/db
+JWT_SECRET=any-long-random-string
+# optional:
+PORT=4000
+FRONTEND_ORIGIN=http://localhost:3000
+```
+
+`.env.local` (repo root):
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+### 4. Run both servers
+
+```bash
+cd server && npm run dev   # API + WebSocket on :4000
+npm run dev                # Next.js on :3000 (separate terminal)
+```
+
+Open [http://localhost:3000](http://localhost:3000), sign up, create a channel — then open the same channel in a second browser to watch messages arrive live.
 
 ## Available Scripts
 
-| Command         | Description                              |
-| --------------- | ---------------------------------------- |
-| `npm run dev`   | Start the development server             |
-| `npm run build` | Create a production build                |
-| `npm run start` | Run the production build                 |
-| `npm run lint`  | Lint the project with ESLint             |
+**Frontend** (repo root):
+
+| Command         | Description                  |
+| --------------- | ---------------------------- |
+| `npm run dev`   | Start the Next.js dev server |
+| `npm run build` | Create a production build    |
+| `npm run start` | Run the production build     |
+| `npm run lint`  | Lint with ESLint             |
+
+**Server** (`server/`):
+
+| Command         | Description                          |
+| --------------- | ------------------------------------ |
+| `npm run dev`   | Start the API with `node --watch`    |
+| `npm run start` | Start the API                        |
 
 ## Deploy
 
-This app is deployed on [Vercel](https://vercel.com) at **[group-chat-app-lime-alpha.vercel.app](https://group-chat-app-lime-alpha.vercel.app)**. That deployment still reflects the earlier Supabase-backed build — redeploy once the new backend lands. No Supabase environment variables are needed anymore; add whatever your new backend requires instead.
+Three pieces, deployed separately:
+
+| Piece            | Where                                      | Env                                                            |
+| ---------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| Frontend         | [Vercel](https://vercel.com) — [grpchat.org](https://grpchat.org) | `NEXT_PUBLIC_API_URL=https://api.grpchat.org`                  |
+| API + WebSocket  | [Render](https://render.com) — `api.grpchat.org` | `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_ORIGIN`, `COOKIE_DOMAIN`, `NODE_ENV=production` |
+| Postgres         | [Neon](https://neon.tech)                  | Apply `server/schema.sql` once                                 |
+
+Serving the API from a subdomain keeps auth same-site: the cookie is set for the shared domain (`COOKIE_DOMAIN`, e.g. `.grpchat.org`), so the browser sends it to both the site and the API — including on the WebSocket handshake.
