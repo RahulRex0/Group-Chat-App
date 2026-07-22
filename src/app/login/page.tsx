@@ -1,30 +1,69 @@
 'use client'
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
 import Image from "next/image"
 import styles from "./login.module.css"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage(){
     const [email,setEmail]=useState('')
     const [password,setPassword]=useState('')
     const [message,setMessage]=useState('')
-    const router= useRouter()
-    const supabase= createClient()
+
+    const api= process.env.NEXT_PUBLIC_API_URL
+    const router = useRouter() 
 
     async function handleSignUp() {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) setMessage(error.message)
-        else router.push('/')
-      }
-    
-      async function handleLogIn() {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) setMessage(error.message)
-        else router.push('/')
-      }
-    
+
+        try {
+            const res= await fetch(`${api}/register`,{
+                method:"post",
+                headers:{"content-type":"application/json"},
+                credentials:"include",
+                body:JSON.stringify({email,password})
+            })
+            const data = await res.json() 
+
+            if(!res.ok){
+                setMessage(data.error)
+                return
+            }
+
+            setMessage("account created — now log in")
+
+        } catch (error) {
+            console.log(error)
+            setMessage("can't reach the server — is it running?")
+        }
+
+
+    }
+
+    async function handleLogIn() {
+
+        try {
+            const res= await fetch(`${api}/login`,{
+                method:"post",
+                headers:{"content-type":"application/json"},
+                credentials:"include",
+                body:JSON.stringify({email,password})
+            })
+            const data = await res.json()
+
+            if(!res.ok){
+                setMessage(data.error)
+                return
+            }
+
+            router.push("/") 
+
+        } catch (error) {
+            console.log(error)
+            setMessage("can't reach the server")
+        }
+
+    }
+
     return(
         <main className={styles.page}>
             <div className={styles.card}>

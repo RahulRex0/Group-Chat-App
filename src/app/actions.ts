@@ -1,58 +1,77 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
+
+const api = process.env.NEXT_PUBLIC_API_URL
 
 export async function signOut() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+
+  const cookieStore = await cookies()
+  cookieStore.delete('token')
+
   redirect('/login')
 }
+
 export async function createChannel(formData: FormData) {
-    const name = formData.get('name') as string
-    if (!name?.trim()) return
-  
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-  
-    await supabase.from('channels').insert({
-      name: name.trim(),
-      created_by: user.id,
-    })
-  
-    revalidatePath('/')
-  }
-  export async function sendMessage(formData: FormData) {
-    const content = (formData.get('content') as string)?.trim()
-    const channelId = formData.get('channelId') as string
-    if (!content || !channelId) return
-  
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-  
-    await supabase.from('messages').insert({
-      content,
-      channel_id: channelId,
-      user_id: user.id,
+  const name = formData.get('name') as string
+  if (!name?.trim()) return
+
+    const token = (await cookies()).get("token")?.value
+    if(!token){
+      redirect("/login")
+    }
+
+    const res= await fetch(`${api}/channels`,{
+      method:"post",
+      headers:{"content-type":"application/json",Cookie: `token=${token}`},
+      body:JSON.stringify({ name })
     })
 
-    revalidatePath(`/channels/${channelId}`)
+  if(!res.ok){return}
+  revalidatePath('/')
+}
+
+export async function sendMessage(formData: FormData) {
+  const content = (formData.get('content') as string)?.trim()
+  const channelId = formData.get('channelId') as string
+  if (!content || !channelId) return
+
+  const token = (await cookies()).get('token')?.value
+  if (!token) {
+    redirect('/login')
   }
-  export async function deleteChannel(formData: FormData) {
-    const channelId = formData.get('channelId') as string
-    if (!channelId) return
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return // any logged-in user may delete; just block anonymous
+  const res = await fetch(`${api}/channels/${channelId}/messages`, {
+    method: 'post',
+    headers: {
+      'content-type': 'application/json',
+      Cookie: `token=${token}`,
+    },
+    body: JSON.stringify({ content }),
+  })
 
-    await supabase
-      .from('channels')
-      .delete()
-      .eq('id', channelId)
+  if (!res.ok) return
 
-    revalidatePath('/')
+  revalidatePath(`/channels/${channelId}`)
+}
+
+export async function deleteChannel(formData: FormData) {
+  const channelId = formData.get('channelId') as string
+  if (!channelId) return
+
+  const token = (await cookies()).get("token")?.value
+  if(!token){
+    redirect("/login")
   }
+
+  const res= await fetch(`${api}/channels/${channelId}`,{
+    method:"delete",
+    headers:{Cookie: `token=${token}`}
+  })
+
+  if(!res.ok){return}
+
+  revalidatePath('/')
+}

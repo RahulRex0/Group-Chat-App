@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from "react"
-import { createClient } from '@/utils/supabase/client'
 import styles from "./messages.module.css"
+import { useEffect, useSyncExternalStore, useState } from "react"
 
 type Messages = {
     id: string
@@ -17,70 +16,82 @@ type MessagesProps = {
     channelId: string
 }
 
+const subscribe = () => () => {}
+
+function useHydrated() {
+    return useSyncExternalStore(subscribe, () => true, () => false)
+}
+
 export default function Messages({ initialMessages, currentUserId, channelId }: MessagesProps) {
-    const [messages, setMessages] = useState(initialMessages)
-    const [mounted, setMounted] = useState(false)
+    const [liveMessages, setLiveMessages] = useState<Messages[]>([])
 
-    useEffect(() => {
-        setMounted(true)
-    }, [])
+    const messagesById = new Map<string, Messages>()
+    
+    for (const message of [...initialMessages, ...liveMessages]) {
+        messagesById.set(message.id, message)
+    }
+    
+    const messages = Array.from(messagesById.values())
+    const hydrated = useHydrated()
 
-    useEffect(() => {
-        const supabase = createClient()
-        let channel: ReturnType<typeof supabase.channel> | null = null
-        let cancelled = false
+    useEffect(()=>{
 
-        async function start() {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (cancelled) return
-            await supabase.realtime.setAuth(session?.access_token ?? null)
-            if (cancelled) return
+        const apiUrl= process.env.NEXT_PUBLIC_API_URL
+        if (!apiUrl) return
 
-            channel = supabase
-                .channel(`messages:${channelId}`)
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'messages',
-                        filter: `channel_id=eq.${channelId}`,
-                    },
-                    async (payload) => {
-                        console.log('realtime INSERT received:', payload.new)
+        const socketUrl = new URL(apiUrl)
+        socketUrl.protocol =
+            socketUrl.protocol === "https:" ? "wss:" : "ws:"
 
-                        const row = payload.new as {
-                            id: string
-                            content: string
-                            created_at: string
-                            user_id: string
+        const socket = new WebSocket(socketUrl)
+
+        const handleOpen = () => {
+            console.log("WebSocket connected")
+
+            const subscription = {
+                type: "subscribe",
+                channelId
+            }
+        
+            socket.send(JSON.stringify(subscription))
+        }
+
+        const handleMessage = (socketEvent: MessageEvent) => {
+            if (typeof socketEvent.data !== "string") return
+        
+            try {
+                const event = JSON.parse(socketEvent.data)
+        
+                if (
+                    event.type === "message_created" &&
+                    event.channelId === channelId
+                ) {
+                    setLiveMessages((currentMessages) => {
+                        const alreadyExists = currentMessages.some(
+                            (message) => message.id === event.message.id
+                        )
+                    
+                        if (alreadyExists) {
+                            return currentMessages
                         }
-
-                        const { data: profile } = await supabase
-                            .from('profiles')
-                            .select('username')
-                            .eq('id', row.user_id)
-                            .single()
-
-                        setMessages((current) => {
-                            if (current.some((m) => m.id === row.id)) return current
-                            return [...current, { ...row, username: profile?.username ?? 'Unknown' }]
-                        })
-                    }
-                )
-                .subscribe((status) => {
-                    console.log('realtime status:', status)
-                })
+                    
+                        return [...currentMessages, event.message]
+                    })
+                }
+            } catch {
+                return
+            }
         }
+    
+        socket.addEventListener("open", handleOpen)
+        socket.addEventListener("message", handleMessage)
 
-        start()
-
-        return () => {
-            cancelled = true
-            if (channel) supabase.removeChannel(channel)
+        return()=>{
+            socket.removeEventListener("open", handleOpen)
+            socket.removeEventListener("message", handleMessage)
+            socket.close()
         }
-    }, [channelId])
-
+    },[channelId])
 
     return (
         <div className={styles.list}>
@@ -92,7 +103,7 @@ export default function Messages({ initialMessages, currentUserId, channelId }: 
             )}
             {messages.map((m) => {
                 const mine = m.user_id === currentUserId
-                const time = mounted
+                const time = hydrated
                     ? new Date(m.created_at).toLocaleTimeString([], {
                         hour: 'numeric',
                         minute: '2-digit',
@@ -113,5 +124,4 @@ export default function Messages({ initialMessages, currentUserId, channelId }: 
             })}
         </div>
     )
-    
 }
