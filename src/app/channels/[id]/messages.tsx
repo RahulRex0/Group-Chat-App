@@ -1,7 +1,7 @@
 'use client'
 
 import styles from "./messages.module.css"
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect, useSyncExternalStore, useState } from "react"
 
 type Messages = {
     id: string
@@ -23,7 +23,15 @@ function useHydrated() {
 }
 
 export default function Messages({ initialMessages, currentUserId, channelId }: MessagesProps) {
-    const messages = initialMessages
+    const [liveMessages, setLiveMessages] = useState<Messages[]>([])
+
+    const messagesById = new Map<string, Messages>()
+    
+    for (const message of [...initialMessages, ...liveMessages]) {
+        messagesById.set(message.id, message)
+    }
+    
+    const messages = Array.from(messagesById.values())
     const hydrated = useHydrated()
 
     useEffect(()=>{
@@ -47,11 +55,40 @@ export default function Messages({ initialMessages, currentUserId, channelId }: 
         
             socket.send(JSON.stringify(subscription))
         }
+
+        const handleMessage = (socketEvent: MessageEvent) => {
+            if (typeof socketEvent.data !== "string") return
+        
+            try {
+                const event = JSON.parse(socketEvent.data)
+        
+                if (
+                    event.type === "message_created" &&
+                    event.channelId === channelId
+                ) {
+                    setLiveMessages((currentMessages) => {
+                        const alreadyExists = currentMessages.some(
+                            (message) => message.id === event.message.id
+                        )
+                    
+                        if (alreadyExists) {
+                            return currentMessages
+                        }
+                    
+                        return [...currentMessages, event.message]
+                    })
+                }
+            } catch {
+                return
+            }
+        }
     
         socket.addEventListener("open", handleOpen)
+        socket.addEventListener("message", handleMessage)
 
         return()=>{
             socket.removeEventListener("open", handleOpen)
+            socket.removeEventListener("message", handleMessage)
             socket.close()
         }
     },[channelId])

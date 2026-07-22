@@ -72,7 +72,7 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
         <div style={{fontSize:"28px", fontWeight:"bold"}}># {channel.name}</div>
       </div>
       <div className={styles.message}>
-        <Messages initialMessages={initialMessages} currentUserId={user.userId } channelId={id} />
+        <Messages key={id} initialMessages={initialMessages} currentUserId={user.userId } channelId={id} />
       </div>
 
 
