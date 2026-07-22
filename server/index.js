@@ -214,13 +214,41 @@ app.post("/channels/:id/messages",requireAuth,async(req,res)=>{
         return res.status(400).json({error:"no content"})
     }
 
+    if (content.length > 2000) {
+        return res.status(400).json({ error: "message too long (max 2000)" })
+      }
+
     const {id}=req.params
     const{userId}=req.user
 
     try {
-        const result= await pool.query(`insert into messages(user_id, channel_id, content)values($1,$2,$3)returning id, content, created_at, user_id `,[userId,id,content])
-
-        return res.status(201).json({ message: {...result.rows[0], username: req.user.username} })
+        const result = await pool.query(
+            `insert into messages(user_id, channel_id, content)values($1,$2,$3)returning id, content, created_at, user_id `,
+            [userId,id,content]
+        )
+        
+        const message = {
+            ...result.rows[0],
+            username: req.user.username
+        }
+        
+        const event = JSON.stringify({
+            type: "message_created",
+            channelId: id,
+            message
+        })
+        
+        for (const client of wss.clients) {
+            if (
+                client.readyState === WebSocket.OPEN &&
+                client.channelId === id
+            ) {
+                client.send(event)
+            }
+        }
+        
+        return res.status(201).json({ message })
+        
     } catch (error) {
         console.log(error)
         if(error.code==="23503"){
@@ -267,7 +295,7 @@ wss.on("connection", (socket,req) => {
         return socket.close(4001, "unauthorized") 
         
     }
-    
+
     socket.on("message", (rawData) => {
         let event
     
